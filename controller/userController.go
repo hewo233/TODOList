@@ -13,15 +13,16 @@ func Register(c *gin.Context) {
 	dbuser := common.GetDB()
 	name := c.PostForm("name")
 	password := c.PostForm("password")
-	telephone := c.PostForm("telephone") //注意都是string
+	email := c.PostForm("email") //注意都是string
 
-	if len(telephone) != 11 {
+	if len(email) == 0 {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{
 			"code":    42200,
-			"message": "错误的手机号",
+			"message": "错误的邮箱",
 		})
 		return
 	}
+
 	if len(name) == 0 {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{
 			"code":    42200,
@@ -38,11 +39,11 @@ func Register(c *gin.Context) {
 	}
 
 	var user model.User
-	dbuser.Where("telephone = ?", telephone).First(&user)
+	dbuser.Where("email = ?", email).First(&user)
 	if user.ID != 0 {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{
 			"code":    42200,
-			"message": "手机号已被注册",
+			"message": "邮箱已被注册",
 		})
 		return
 	}
@@ -57,16 +58,17 @@ func Register(c *gin.Context) {
 		return
 	}
 	newUser := model.User{
-		Name:      name,
-		Telephone: telephone,
-		Password:  string(HashPassword),
+		Name:     name,
+		Email:    email,
+		Password: string(HashPassword),
 	}
 	err2 := dbuser.Create(&newUser).Error
 	if err2 != nil {
 		c.JSON(http.StatusBadGateway, gin.H{
 			"code":    50000,
-			"message": "i don't know",
+			"message": err2,
 		})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -81,15 +83,15 @@ func Login(c *gin.Context) {
 	dbuser := common.GetDB()
 	var requestUser model.User
 	c.Bind(&requestUser)
-	telephone := requestUser.Telephone
+	email := requestUser.Email
 	password := requestUser.Password
 
 	//name := c.PostForm("name")
 
-	if len(telephone) != 11 {
+	if len(email) == 0 {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{
 			"code":    42200,
-			"message": "手机号错误",
+			"message": "邮箱错误",
 		})
 		return
 	}
@@ -103,7 +105,7 @@ func Login(c *gin.Context) {
 	}
 
 	var user model.User
-	dbuser.Where("telephone = ?", telephone).First(&user)
+	dbuser.Where("email = ?", email).First(&user)
 	if user.ID == 0 {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{
 			"code":    42200,
